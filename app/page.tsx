@@ -13,7 +13,6 @@ export default function Home() {
   const [tabsHeader, setTabsHeader] = useState("Tabs Headers");
   const [editingHeader, setEditingHeader] = useState(false);
 
-  // Add new tab
   const addTab = () => {
     if (tabs.length < 15) {
       const newId = tabs.length + 1;
@@ -21,7 +20,6 @@ export default function Home() {
     }
   };
 
-  // Remove last tab
   const removeTab = () => {
     if (tabs.length > 1) {
       setTabs(tabs.slice(0, -1));
@@ -29,7 +27,6 @@ export default function Home() {
     }
   };
 
-  // Generate full HTML5 + JS output
   const generateOutput = () => {
     let html = `<!DOCTYPE html>
 <html lang="en">
@@ -38,9 +35,7 @@ export default function Home() {
   <title>Tabs Output</title>
 </head>
 <body style="font-family:sans-serif; padding:1rem;">
-  <h1>${tabsHeader}</h1>
-`;
-
+  <h1>${tabsHeader}</h1>`;
     tabs.forEach((tab) => {
       html += `
   <div>
@@ -48,7 +43,6 @@ export default function Home() {
     <p>${tab.content}</p>
   </div>`;
     });
-
     html += `
   <script type="text/javascript">
     window.onload = function() {
@@ -57,11 +51,9 @@ export default function Home() {
   </script>
 </body>
 </html>`;
-
     setOutput(html);
   };
 
-  // Copy output to clipboard
   const copyOutput = () => {
     navigator.clipboard.writeText(output);
     alert("Output copied to clipboard!");
@@ -69,17 +61,15 @@ export default function Home() {
 
   return (
     <div
+      className="flex flex-col justify-center gap-4 p-4 md:grid"
       style={{
-        display: "grid",
         gridTemplateColumns: "1fr 2fr 1fr",
         gap: "1rem",
         padding: "1rem",
         minHeight: "75vh",
       }}
     >
-      {/* Tabs Headers */}
       <aside>
-        {/* Editable Tabs Header */}
         <div style={{ marginBottom: "0.5rem" }}>
           {editingHeader ? (
             <input
@@ -125,7 +115,6 @@ export default function Home() {
         </ul>
       </aside>
 
-      {/* Tabs Content */}
       <section>
         <h2>Tabs Content</h2>
         <div
@@ -161,7 +150,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Output Section */}
       <aside>
         <h2>Output</h2>
         <div style={{ marginTop: "1rem" }}>
@@ -196,7 +184,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Output Box (always visible, scrollable) */}
         <pre
           style={{
             marginTop: "1rem",
