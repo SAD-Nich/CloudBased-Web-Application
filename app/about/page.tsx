@@ -1,5 +1,5 @@
 export default function AboutPage() {
-  const YOUTUBE_LINK = "https://youtu.be/3fYfB1MkdTk";
+  const YOUTUBE_LINK = "https://youtu.be/n4zleo3MXzE";
   const toEmbed = (url: string) => {
     try {
       const u = new URL(url);
