@@ -5,8 +5,8 @@ export default function Footer() {
     <footer
       style={{
         padding: "0.5rem 1rem",
-        background: "black", // match header background
-        borderTop: "1px solid #ccc", // same border style as header
+        background: "black",
+        borderTop: "1px solid #ccc",
         textAlign: "center",
       }}
     >

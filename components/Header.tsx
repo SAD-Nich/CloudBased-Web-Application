@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 export default function Header({
@@ -13,6 +13,7 @@ export default function Header({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   const navLinks = [
     { href: "/", label: "Tabs" },
@@ -32,7 +33,6 @@ export default function Header({
         transition: "background 0.3s ease, color 0.3s ease",
       }}
     >
-      {/* Top Row: Title + Student No. + Dark Mode Toggle */}
       <div
         style={{
           display: "flex",
@@ -44,7 +44,6 @@ export default function Header({
         <h1 style={{ margin: 0, fontSize: "1.25rem" }}>Assignment 1</h1>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <p style={{ margin: 0, fontSize: "0.9rem" }}>Student No: 22586549</p>
-          {/* Dark Mode Toggle */}
           <button
             onClick={() => setDarkMode(!darkMode)}
             style={{
@@ -54,13 +53,13 @@ export default function Header({
               fontSize: "1.25rem",
             }}
             title="Toggle Dark Mode"
+            aria-label="Toggle Dark Mode"
           >
             {darkMode ? "🌙" : "☀️"}
           </button>
         </div>
       </div>
 
-      {/* Navigation Bar */}
       <nav
         style={{
           display: "flex",
@@ -69,14 +68,9 @@ export default function Header({
           padding: "0.5rem 1.5rem",
           borderTop: "1px solid #333",
         }}
+        aria-label="Main navigation"
       >
-        {/* Desktop Links */}
-        <div
-          style={{
-            display: "flex",
-            gap: "1.5rem",
-          }}
-        >
+        <div className="hidden md:flex" style={{ gap: "1.5rem" }}>
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -100,25 +94,28 @@ export default function Header({
           ))}
         </div>
 
-        {/* Hamburger Menu (visible on mobile) */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden"
           style={{
             background: "none",
             border: "none",
             fontSize: "1.5rem",
             cursor: "pointer",
             color: darkMode ? "#fff" : "#000",
-            display: "block", // show on mobile
           }}
+          aria-label="Open navigation menu"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
         >
           ☰
         </button>
       </nav>
 
-      {/* Mobile Dropdown Menu */}
       {menuOpen && (
         <div
+          id="mobile-menu"
+          className="md:hidden"
           style={{
             display: "flex",
             flexDirection: "column",
