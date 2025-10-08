@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "../components/Header";
+import HeaderClient from "../components/HeaderClient"; // new client wrapper
 import Footer from "../components/Footer";
 
 // Fonts
@@ -23,15 +23,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Header />
-        <main className="min-h-[80vh] p-4">{children}</main>
-        <Footer />
+        <HeaderClient>
+          <main style={{ minHeight: "80vh", padding: "1rem" }}>{children}</main>
+          <Footer />
+        </HeaderClient>
       </body>
     </html>
   );
