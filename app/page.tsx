@@ -1,103 +1,229 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [tabs, setTabs] = useState([
+    { id: 1, title: "Step 1", content: "Step 1: Do something" },
+    { id: 2, title: "Step 2", content: "Step 2: Install VSCode, Chrome, Node..." },
+    { id: 3, title: "Step 3", content: "Step 3: Continue setup" },
+  ]);
+  const [activeTab, setActiveTab] = useState(2);
+  const [darkMode, setDarkMode] = useState(true);
+  const [output, setOutput] = useState("");
+  const [tabsHeader, setTabsHeader] = useState("Tabs Headers");
+  const [editingHeader, setEditingHeader] = useState(false); // NEW state
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  // Add new tab
+  const addTab = () => {
+    if (tabs.length < 15) {
+      const newId = tabs.length + 1;
+      setTabs([...tabs, { id: newId, title: `Step ${newId}`, content: `Step ${newId}: ...` }]);
+    }
+  };
+
+  // Remove last tab
+  const removeTab = () => {
+    if (tabs.length > 1) {
+      setTabs(tabs.slice(0, -1));
+      if (activeTab > tabs.length - 1) setActiveTab(tabs.length - 1);
+    }
+  };
+
+  // Generate full HTML5 + JS output
+  const generateOutput = () => {
+    let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tabs Output</title>
+</head>
+<body style="font-family:sans-serif; padding:1rem;">
+  <h1>${tabsHeader}</h1>
+`;
+
+    tabs.forEach((tab) => {
+      html += `
+  <div>
+    <h3 style="margin:0;">${tab.title}</h3>
+    <p>${tab.content}</p>
+  </div>`;
+    });
+
+    html += `
+  <script type="text/javascript">
+    window.onload = function() {
+      alert("Hello! Your generated tabs are ready.");
+    };
+  </script>
+</body>
+</html>`;
+
+    setOutput(html);
+  };
+
+  // Copy output to clipboard
+  const copyOutput = () => {
+    navigator.clipboard.writeText(output);
+    alert("Output copied to clipboard!");
+  };
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 2fr 1fr",
+        gap: "1rem",
+        padding: "1rem",
+        background: darkMode ? "#222" : "#fff",
+        color: darkMode ? "#fff" : "#000",
+        minHeight: "75vh",
+      }}
+    >
+      {/* Tabs Headers */}
+      <aside>
+        {/* Editable Tabs Header */}
+        <div style={{ marginBottom: "0.5rem" }}>
+          {editingHeader ? (
+            <input
+              type="text"
+              value={tabsHeader}
+              autoFocus
+              onChange={(e) => setTabsHeader(e.target.value)}
+              onBlur={() => setEditingHeader(false)}
+              style={{
+                padding: "0.25rem",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                width: "100%",
+              }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          ) : (
+            <h2
+              style={{ cursor: "pointer", margin: 0 }}
+              onClick={() => setEditingHeader(true)}
+            >
+              {tabsHeader}
+            </h2>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        <div>
+          <button onClick={addTab}>+</button>
+          <button onClick={removeTab}>-</button>
+        </div>
+        <ul>
+          {tabs.map((tab) => (
+            <li
+              key={tab.id}
+              style={{
+                cursor: "pointer",
+                fontWeight: activeTab === tab.id ? "bold" : "normal",
+              }}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.title}
+            </li>
+          ))}
+        </ul>
+      </aside>
+
+      {/* Tabs Content */}
+      <section>
+        <h2>Tabs Content</h2>
+        <div
+          style={{
+            border: "1px solid #ccc",
+            padding: "1rem",
+            minHeight: "200px",
+          }}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <textarea
+            value={tabs.find((t) => t.id === activeTab)?.content || ""}
+            onChange={(e) =>
+              setTabs(
+                tabs.map((t) =>
+                  t.id === activeTab ? { ...t, content: e.target.value } : t
+                )
+              )
+            }
+            style={{
+              width: "100%",
+              height: "100%",
+              background: "transparent",
+              color: darkMode ? "#fff" : "#000",
+              border: "none",
+              resize: "none",
+              outline: "none",
+              fontFamily: "inherit",
+              fontSize: "1rem",
+            }}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        </div>
+      </section>
+
+      {/* Output Section */}
+      <aside>
+        <h2>Output</h2>
+        <label>
+          <input
+            type="checkbox"
+            checked={darkMode}
+            onChange={() => setDarkMode(!darkMode)}
+          />{" "}
+          Dark Mode
+        </label>
+        <div style={{ marginTop: "1rem" }}>
+          <button
+            onClick={generateOutput}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "#0070f3",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              marginRight: "0.5rem",
+            }}
+          >
+            Generate Output
+          </button>
+          {output && (
+            <button
+              onClick={copyOutput}
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#28a745",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Copy
+            </button>
+          )}
+        </div>
+
+        {/* Output Box (always visible, scrollable) */}
+        <pre
+          style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            border: "1px solid #ccc",
+            background: darkMode ? "#111" : "#f9f9f9",
+            color: darkMode ? "#0f0" : "#000",
+            fontSize: "0.9rem",
+            whiteSpace: "pre-wrap",
+            wordWrap: "break-word",
+            minHeight: "200px",
+            maxHeight: "300px",
+            overflowY: "auto",
+          }}
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {output || "No output yet..."}
+        </pre>
+      </aside>
     </div>
   );
 }
