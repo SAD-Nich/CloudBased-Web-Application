@@ -9,10 +9,9 @@ export default function Home() {
     { id: 3, title: "Step 3", content: "Step 3: Continue setup" },
   ]);
   const [activeTab, setActiveTab] = useState(2);
-  const [darkMode, setDarkMode] = useState(true);
   const [output, setOutput] = useState("");
   const [tabsHeader, setTabsHeader] = useState("Tabs Headers");
-  const [editingHeader, setEditingHeader] = useState(false); // NEW state
+  const [editingHeader, setEditingHeader] = useState(false);
 
   // Add new tab
   const addTab = () => {
@@ -75,8 +74,6 @@ export default function Home() {
         gridTemplateColumns: "1fr 2fr 1fr",
         gap: "1rem",
         padding: "1rem",
-        background: darkMode ? "#222" : "#fff",
-        color: darkMode ? "#fff" : "#000",
         minHeight: "75vh",
       }}
     >
@@ -136,6 +133,8 @@ export default function Home() {
             border: "1px solid #ccc",
             padding: "1rem",
             minHeight: "200px",
+            background: "var(--content-bg)",
+            color: "inherit",
           }}
         >
           <textarea
@@ -151,12 +150,12 @@ export default function Home() {
               width: "100%",
               height: "100%",
               background: "transparent",
-              color: darkMode ? "#fff" : "#000",
               border: "none",
               resize: "none",
               outline: "none",
               fontFamily: "inherit",
               fontSize: "1rem",
+              color: "inherit",
             }}
           />
         </div>
@@ -165,14 +164,6 @@ export default function Home() {
       {/* Output Section */}
       <aside>
         <h2>Output</h2>
-        <label>
-          <input
-            type="checkbox"
-            checked={darkMode}
-            onChange={() => setDarkMode(!darkMode)}
-          />{" "}
-          Dark Mode
-        </label>
         <div style={{ marginTop: "1rem" }}>
           <button
             onClick={generateOutput}
@@ -211,8 +202,8 @@ export default function Home() {
             marginTop: "1rem",
             padding: "1rem",
             border: "1px solid #ccc",
-            background: darkMode ? "#111" : "#f9f9f9",
-            color: darkMode ? "#0f0" : "#000",
+            background: "var(--output-bg)",
+            color: "inherit",
             fontSize: "0.9rem",
             whiteSpace: "pre-wrap",
             wordWrap: "break-word",
