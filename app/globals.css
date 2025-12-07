@@ -1,26 +1,46 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* ---------- Base theme tokens (LIGHT by default) ---------- */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+
+  /* Escape Room theme vars (LIGHT) */
+  --escape-border: rgba(15, 23, 42, 0.12);
+  --escape-card: rgba(255, 255, 255, 0.82);
+  --escape-card-2: rgba(255, 255, 255, 0.72);
+  --escape-input: rgba(255, 255, 255, 0.92);
+
+  /* Light overlay: softer, brighter */
+  --escape-overlay:
+    radial-gradient(900px 420px at 15% 0%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.35) 55%, rgba(255, 255, 255, 0.15) 70%),
+    linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.65));
 }
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+/* ---------- DARK theme tokens (when <html class="dark">) ---------- */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  --escape-border: rgba(255, 255, 255, 0.12);
+  --escape-card: rgba(0, 0, 0, 0.45);
+  --escape-card-2: rgba(0, 0, 0, 0.40);
+  --escape-input: rgba(0, 0, 0, 0.35);
+
+  /* Dark overlay: deeper, higher contrast */
+  --escape-overlay:
+    radial-gradient(900px 420px at 15% 0%, rgba(255, 255, 255, 0.10), transparent 60%),
+    radial-gradient(900px 420px at 85% 10%, rgba(255, 255, 255, 0.06), transparent 65%),
+    linear-gradient(rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.92));
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+
+/* ---------- Base layout ---------- */
+html, body {
+  height: 100%;
 }
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  transition: background 0.3s ease, color 0.3s ease;
 }
