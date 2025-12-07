@@ -30,7 +30,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "format-lock",
     name: "Format Lock (Easy)",
-    backgroundUrl: "/escape-room-bg.jpg",
+    backgroundUrl: "/icons/jackdaw.jpg",
     stages: [
       {
         id: "s1",
@@ -81,7 +81,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "debug-crypt",
     name: "Debug Crypt (Medium)",
-    backgroundUrl: "/escape-room-bg.jpg",
+    backgroundUrl: "/icons/qar.jpg",
     stages: [
       {
         id: "m1",
@@ -142,6 +142,20 @@ function getCookie(name: string) {
   const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return m ? decodeURIComponent(m[1]) : null;
 }
+
+function SvgIcon({ src, alt }: { src: string; alt: string }) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={16}
+      height={16}
+      className="h-4 w-4"
+      aria-hidden="true"
+    />
+  );
+}
+
 
 function SmallActionButton({
   label,
@@ -323,7 +337,7 @@ export default function EscapeRoomClient() {
               label="Reset Run"
               onClick={resetRun}
               disabled={false}
-              leftIcon="🔁"
+              leftIcon={<SvgIcon src="/icons/Reset.svg" alt="Reset" />}
               isDark={isDark}
             />
           </div>
@@ -344,21 +358,21 @@ export default function EscapeRoomClient() {
                   label={showHint ? "Hide Hint" : "Show Hint"}
                   onClick={() => setShowHint((v) => !v)}
                   disabled={failed}
-                  leftIcon="💡"
+                  leftIcon={<SvgIcon src="/icons/Hint.svg" alt="Hint" />}
                   isDark={isDark}
                 />
                 <SmallActionButton
                   label="Check"
                   onClick={check}
                   disabled={failed}
-                  leftIcon="✅"
+                  leftIcon={<SvgIcon src="/icons/Check.svg" alt="Check" />}
                   isDark={isDark}
                 />
                 <SmallActionButton
                   label={isLast ? "Finish" : "Next"}
                   onClick={next}
                   disabled={failed}
-                  leftIcon="➡️"
+                  leftIcon={<SvgIcon src="/icons/Next.svg" alt="Next" />}
                   isDark={isDark}
                 />
               </div>
