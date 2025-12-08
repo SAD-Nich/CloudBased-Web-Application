@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Timer from "../../components/Timer";
-import IconButton from "../../components/IconButton";
 
 type Stage = {
   id: string;
@@ -13,6 +12,13 @@ type Stage = {
   inputLabel: string;
   placeholder: string;
   validate: (answer: string) => { ok: boolean; message: string };
+
+  // ✅ Optional: stage can require selecting the correct icon
+  iconChoice?: {
+    instruction: string;
+    correctId: string;
+    choices: { id: string; src: string; alt: string; label: string }[];
+  };
 };
 
 type Scenario = {
@@ -26,111 +32,6 @@ function normalize(s: string) {
   return s.trim().toLowerCase();
 }
 
-const SCENARIOS: Scenario[] = [
-  {
-    id: "format-lock",
-    name: "Format Lock (Easy)",
-    backgroundUrl: "/icons/jackdaw.jpg",
-    stages: [
-      {
-        id: "s1",
-        title: "Stage 1 — The Cursor Key",
-        prompt:
-          "Sticky note: “The password is the shortcut to open DevTools on Chrome.” Enter the shortcut (Windows).",
-        hint: "Hint: It includes Ctrl + Shift + ...",
-        timeSeconds: 120,
-        inputLabel: "Shortcut",
-        placeholder: "e.g., Ctrl+Shift+I",
-        validate: (ans) => {
-          const a = normalize(ans).replace(/\s/g, "");
-          const ok = a === "ctrl+shift+i" || a === "ctrl+shift+j";
-          return { ok, message: ok ? "Correct — the lock clicks open." : "Nope. Try again." };
-        },
-      },
-      {
-        id: "s2",
-        title: "Stage 2 — The Data Scroll",
-        prompt:
-          'A console log shows: {"code": "  042  "}. Convert it to an integer (no spaces, no leading zeros). What is it?',
-        hint: "Trim spaces, remove leading zeros (then it's an integer).",
-        timeSeconds: 150,
-        inputLabel: "Integer value",
-        placeholder: "Enter final number",
-        validate: (ans) => {
-          const ok = normalize(ans) === "42";
-          return { ok, message: ok ? "Nice. The second lock opens." : "Not quite. Think: 042 => ?" };
-        },
-      },
-      {
-        id: "s3",
-        title: "Stage 3 — The Range Gate",
-        prompt:
-          "Final gate: Enter the only valid range for this puzzle: numbers from 0 to 1000 inclusive. Format: 0-1000.",
-        hint: "Inclusive means endpoints allowed.",
-        timeSeconds: 180,
-        inputLabel: "Range",
-        placeholder: "0-1000",
-        validate: (ans) => {
-          const a = normalize(ans).replace(/\s/g, "");
-          const ok = a === "0-1000";
-          return { ok, message: ok ? "You escaped! ✅" : "Range format or values are wrong." };
-        },
-      },
-    ],
-  },
-  {
-    id: "debug-crypt",
-    name: "Debug Crypt (Medium)",
-    backgroundUrl: "/icons/qar.jpg",
-    stages: [
-      {
-        id: "m1",
-        title: "Stage 1 — The HTTP Door",
-        prompt: "A note reads: “Success is not 404.” What is the standard HTTP status code for OK?",
-        hint: "Most common success code.",
-        timeSeconds: 120,
-        inputLabel: "Status code",
-        placeholder: "e.g., 200",
-        validate: (ans) => {
-          const ok = normalize(ans) === "200";
-          return { ok, message: ok ? "Door unlocked." : "Nope — think of OK." };
-        },
-      },
-      {
-        id: "m2",
-        title: "Stage 2 — The JSON Riddle",
-        prompt: "Enter valid JSON for an object with key 'a' set to number 1.",
-        hint: "JSON uses double quotes for keys.",
-        timeSeconds: 180,
-        inputLabel: "JSON",
-        placeholder: `{"a":1}`,
-        validate: (ans) => {
-          try {
-            const obj = JSON.parse(ans);
-            const ok = obj && typeof obj === "object" && obj.a === 1;
-            return { ok, message: ok ? "Valid JSON. Proceed." : "Parsed, but wrong content." };
-          } catch {
-            return { ok: false, message: "That isn't valid JSON." };
-          }
-        },
-      },
-      {
-        id: "m3",
-        title: "Stage 3 — The Boolean Seal",
-        prompt: "Enter the JavaScript boolean literal that means “yes”.",
-        hint: "Not 'Yes', not 'TRUE' — literal.",
-        timeSeconds: 150,
-        inputLabel: "Boolean literal",
-        placeholder: "true / false",
-        validate: (ans) => {
-          const ok = normalize(ans) === "true";
-          return { ok, message: ok ? "Escaped! ✅" : "Wrong literal." };
-        },
-      },
-    ],
-  },
-];
-
 function formatMMSS(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -143,19 +44,29 @@ function getCookie(name: string) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-function SvgIcon({ src, alt }: { src: string; alt: string }) {
+function SvgIcon({
+  src,
+  alt,
+  invert,
+  size = 16,
+}: {
+  src: string;
+  alt: string;
+  invert?: boolean;
+  size?: number;
+}) {
   return (
     <img
       src={src}
       alt={alt}
-      width={16}
-      height={16}
-      className="h-4 w-4"
+      width={size}
+      height={size}
+      className="block"
       aria-hidden="true"
+      style={invert ? { filter: "invert(1)" } : undefined}
     />
   );
 }
-
 
 function SmallActionButton({
   label,
@@ -184,25 +95,172 @@ function SmallActionButton({
           : "border-black/15 bg-white text-zinc-900 hover:bg-zinc-50 focus:ring-black/10",
       ].join(" ")}
     >
-      {leftIcon ? <span className="text-base leading-none">{leftIcon}</span> : null}
+      {leftIcon ? <span className="leading-none">{leftIcon}</span> : null}
       <span>{label}</span>
     </button>
   );
 }
 
+const SCENARIOS: Scenario[] = [
+  {
+    id: "format-lock",
+    name: "Code Vault (Easy)",
+    backgroundUrl: "/icons/jackdaw.jpg",
+    stages: [
+      {
+        id: "s1",
+        title: "Stage 1 — Format the Function",
+        prompt:
+          "Format this into valid JavaScript (any style is okay), keeping the same logic:\n\nfunction add(a,b){return a+b}",
+        hint: "Must still be a function called add with parameters a and b, returning a + b.",
+        timeSeconds: 140,
+        inputLabel: "Formatted code",
+        placeholder: "Paste your formatted JS code here...",
+        validate: (ans) => {
+          const a = ans.replace(/\s/g, "").toLowerCase();
+          const ok =
+            (a.includes("functionadd(a,b){returna+b") ||
+              (a.includes("add") && a.includes("=>") && a.includes("a+b"))) &&
+            a.includes("a") &&
+            a.includes("b");
+          return {
+            ok,
+            message: ok
+              ? "Nice formatting — the vault accepts it."
+              : "Not yet. Keep the same logic: add(a,b) returns a+b.",
+          };
+        },
+      },
+      {
+        id: "s2",
+        title: "Stage 2 — Port Data (CSV → JSON)",
+        prompt:
+          "Convert this CSV row into a JSON object (numbers stay numbers):\n\nid,name,price\n42,Keyboard,199.99",
+        hint: `Expected keys: id, name, price. Example output: {"id":42,"name":"Keyboard","price":199.99}`,
+        timeSeconds: 180,
+        inputLabel: "JSON output",
+        placeholder: `{"id":42,"name":"Keyboard","price":199.99}`,
+        validate: (ans) => {
+          try {
+            const obj = JSON.parse(ans);
+            const ok =
+              obj &&
+              typeof obj === "object" &&
+              obj.id === 42 &&
+              obj.name === "Keyboard" &&
+              Number(obj.price) === 199.99;
+            return { ok, message: ok ? "Correct conversion — data port complete." : "Valid JSON, but values/keys are wrong." };
+          } catch {
+            return { ok: false, message: "That isn't valid JSON." };
+          }
+        },
+      },
+      {
+        id: "s3",
+        title: "Stage 3 — Generate 0 to 1000 (Inclusive)",
+        prompt:
+          "Write JavaScript code that prints ALL numbers from 0 to 1000 inclusive.\n\n(Use for/while—any valid approach.)",
+        hint: "Must include 0, must include 1000. A for-loop is easiest.",
+        timeSeconds: 220,
+        inputLabel: "JavaScript code",
+        placeholder: "for (let i = 0; i <= 1000; i++) { console.log(i); }",
+        validate: (ans) => {
+          const a = ans.toLowerCase().replace(/\s+/g, " ");
+          const hasForLoop =
+            /for\s*\(\s*let\s+\w+\s*=\s*0\s*;\s*\w+\s*<=\s*1000\s*;\s*\w+\+\+\s*\)/.test(a) &&
+            /console\.log\s*\(\s*\w+\s*\)/.test(a);
+          const hasWhileLoop =
+            /let\s+\w+\s*=\s*0\s*;/.test(a) &&
+            /while\s*\(\s*\w+\s*<=\s*1000\s*\)/.test(a) &&
+            /console\.log\s*\(\s*\w+\s*\)/.test(a);
+          const ok = hasForLoop || hasWhileLoop;
+          return { ok, message: ok ? "Perfect — the range gate opens. ✅" : "Not quite. Make sure it prints 0..1000 inclusive." };
+        },
+      },
+    ],
+  },
+  {
+    id: "debug-crypt",
+    name: "Debug Crypt (Medium)",
+    backgroundUrl: "/icons/qar.jpg",
+    stages: [
+      {
+        id: "m1",
+        title: "Stage 1 — Pick the Debug Symbol",
+        prompt:
+          "A door panel says: “Select the icon that represents debugging / inspection.”\n\nChoose the correct icon below. Wrong choices will not unlock the door.",
+        hint: "Think: debugging = inspect / bug / magnifier. Your correct one is the Debug icon you created.",
+        timeSeconds: 120,
+        inputLabel: "Icon selection",
+        placeholder: "Choose the correct icon...",
+        iconChoice: {
+          instruction: "Click the correct icon to unlock the debugger.",
+          correctId: "debug",
+          choices: [
+            { id: "check", src: "/icons/Check.svg", alt: "Check", label: "Check" },
+            { id: "next", src: "/icons/Next.svg", alt: "Next", label: "Next" },
+            { id: "hint", src: "/icons/Hint.svg", alt: "Hint", label: "Hint" },
+            { id: "debug", src: "/icons/Debug.svg", alt: "Debug", label: "Debug" }, // ✅ correct
+          ],
+        },
+        validate: (ans) => {
+          const ok = normalize(ans) === "debug";
+          return { ok, message: ok ? "Correct — debugger unlocked." : "Wrong symbol. The door stays locked." };
+        },
+      },
+      {
+        id: "m2",
+        title: "Stage 2 — Fix Invalid JSON",
+        prompt:
+          "This is NOT valid JSON:\n\n{'a':1,}\n\nRewrite it as valid JSON for an object with key \"a\" set to number 1.",
+        hint: "Valid JSON uses double quotes, and no trailing commas.",
+        timeSeconds: 180,
+        inputLabel: "Valid JSON",
+        placeholder: `{"a":1}`,
+        validate: (ans) => {
+          try {
+            const obj = JSON.parse(ans);
+            const ok = obj && typeof obj === "object" && obj.a === 1;
+            return { ok, message: ok ? "Valid JSON — crypt seal broken." : "Parsed, but wrong content." };
+          } catch {
+            return { ok: false, message: "That isn't valid JSON." };
+          }
+        },
+      },
+      {
+        id: "m3",
+        title: "Stage 3 — Parse + Trim",
+        prompt:
+          'Write ONE line of JavaScript that converts the string "  042  " into the number 42.\n\n(Just paste the line, like parseInt(...) or Number(...).)',
+        hint: "Use trim() and parseInt/Number.",
+        timeSeconds: 180,
+        inputLabel: "One-line JS",
+        placeholder: `parseInt("  042  ".trim(), 10)`,
+        validate: (ans) => {
+          const a = ans.toLowerCase().replace(/\s/g, "");
+          const hasTrim = a.includes(".trim()");
+          const has042 = a.includes('"042"') || a.includes("'042'") || a.includes("042");
+          const hasParse = a.includes("parseint(") || a.includes("number(");
+          const ok = hasTrim && has042 && hasParse;
+          return { ok, message: ok ? "Nice — clean parse. You escaped! ✅" : "Not yet. Must include trim() and parseInt/Number." };
+        },
+      },
+    ],
+  },
+];
+
 export default function EscapeRoomClient() {
   const [isDark, setIsDark] = useState(true);
 
-  // Read cookie and keep in sync WITHOUT changing other files.
   useEffect(() => {
     const read = () => {
-      const saved = getCookie("theme"); // "dark" | "light" | null
+      const saved = getCookie("theme");
       const shouldBeDark = saved ? saved === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
       setIsDark(!!shouldBeDark);
     };
 
     read();
-    const id = window.setInterval(read, 300); // simple + reliable
+    const id = window.setInterval(read, 300);
     return () => window.clearInterval(id);
   }, []);
 
@@ -217,29 +275,43 @@ export default function EscapeRoomClient() {
   const [showHint, setShowHint] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  // ✅ for icon-choice stage locking
+  const [unlockedByIcon, setUnlockedByIcon] = useState(false);
+
+  useEffect(() => {
+    setUnlockedByIcon(false);
+    setAnswer("");
+    setStatus(null);
+    setShowHint(false);
+  }, [scenarioId, stageIndex]);
+
   const resetRun = () => {
-    console.log("[telemetry] escape_reset", { ts: Date.now(), scenarioId: scenario.id });
     setStageIndex(0);
     setAnswer("");
     setStatus(null);
     setShowHint(false);
     setFailed(false);
+    setUnlockedByIcon(false);
   };
 
   const changeScenario = (id: string) => {
     setScenarioId(id);
-    console.log("[telemetry] scenario_change", { ts: Date.now(), scenarioId: id });
     setStageIndex(0);
     setAnswer("");
     setStatus(null);
     setShowHint(false);
     setFailed(false);
+    setUnlockedByIcon(false);
   };
 
   const check = () => {
     if (failed) return;
+    if (stage.iconChoice && !unlockedByIcon) {
+      setStatus({ ok: false, msg: "Pick the correct icon first." });
+      return;
+    }
+
     const res = stage.validate(answer);
-    console.log("[telemetry] stage_check", { ts: Date.now(), scenarioId: scenario.id, stageId: stage.id, ok: res.ok });
     setStatus({ ok: res.ok, msg: res.message });
   };
 
@@ -250,23 +322,21 @@ export default function EscapeRoomClient() {
       return;
     }
     if (stageIndex < scenario.stages.length - 1) {
-      console.log("[telemetry] stage_next", { ts: Date.now(), scenarioId: scenario.id, from: stage.id });
       setStageIndex(stageIndex + 1);
       setAnswer("");
       setStatus(null);
       setShowHint(false);
+      setUnlockedByIcon(false);
     }
   };
 
   const onExpire = () => {
-    console.log("[telemetry] timer_expired", { ts: Date.now(), scenarioId: scenario.id, stageId: stage.id });
     setFailed(true);
     setStatus({ ok: false, msg: "⏰ Time’s up! Reset the run to try again." });
   };
 
   const isLast = stageIndex === scenario.stages.length - 1;
 
-  // Theme tokens
   const wrapText = isDark ? "text-white" : "text-zinc-900";
   const subText = isDark ? "text-white/75" : "text-zinc-600";
   const chipBg = isDark ? "bg-black/40" : "bg-white/75";
@@ -289,6 +359,8 @@ export default function EscapeRoomClient() {
       linear-gradient(rgba(255,255,255,0.70), rgba(255,255,255,0.92))
     `;
 
+  const checkDisabled = failed || (stage.iconChoice && !unlockedByIcon);
+
   return (
     <div
       className={`min-h-[78vh] transition-colors ${wrapText}`}
@@ -299,12 +371,9 @@ export default function EscapeRoomClient() {
       }}
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs backdrop-blur ${chipBg} ${chipBorder}`}
-            >
+            <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs backdrop-blur ${chipBg} ${chipBorder}`}>
               <span className="font-semibold">Escape Room</span>
               <span className={isDark ? "text-white/40" : "text-black/40"}>•</span>
               <span>
@@ -337,20 +406,70 @@ export default function EscapeRoomClient() {
               label="Reset Run"
               onClick={resetRun}
               disabled={false}
-              leftIcon={<SvgIcon src="/icons/Reset.svg" alt="Reset" />}
+              leftIcon={<SvgIcon src="/icons/Reset.svg" alt="Reset" invert={isDark} />}
               isDark={isDark}
             />
           </div>
         </div>
 
-        {/* Main grid */}
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-          {/* Stage Card */}
           <div className={`rounded-2xl border p-5 backdrop-blur ${cardBg} ${cardBorder}`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h2 className="text-xl font-extrabold sm:text-2xl">{stage.title}</h2>
-                <p className={`mt-2 leading-relaxed ${isDark ? "text-white/85" : "text-zinc-700"}`}>{stage.prompt}</p>
+                <p className={`mt-2 whitespace-pre-wrap leading-relaxed ${isDark ? "text-white/85" : "text-zinc-700"}`}>
+                  {stage.prompt}
+                </p>
+
+                {/* ✅ Multiple-choice icon stage */}
+                {stage.iconChoice && (
+                  <div className={`mt-4 rounded-2xl border p-4 ${card2Bg} ${cardBorder}`}>
+                    <div className="text-sm font-extrabold">{stage.iconChoice.instruction}</div>
+                    <div className={`mt-1 text-xs ${subText}`}>
+                      {unlockedByIcon ? "✅ Correct icon selected. You may proceed." : "Pick carefully — only one is correct."}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {stage.iconChoice.choices.map((c) => {
+                        const selected = answer === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setAnswer(c.id);
+
+                              const isCorrect = c.id === stage.iconChoice!.correctId;
+                              if (isCorrect) {
+                                setUnlockedByIcon(true);
+                                setStatus({ ok: true, msg: "Correct icon — debugger unlocked." });
+                              } else {
+                                setUnlockedByIcon(false);
+                                setStatus({ ok: false, msg: "Wrong icon. Try another one." });
+                              }
+                            }}
+                            className={[
+                              "rounded-2xl border p-3 text-left transition",
+                              "focus:outline-none focus:ring-2",
+                              selected ? (isDark ? "border-white/30" : "border-black/30") : "",
+                              isDark
+                                ? "border-white/15 bg-white/10 hover:bg-white/15 focus:ring-white/20"
+                                : "border-black/15 bg-white hover:bg-zinc-50 focus:ring-black/10",
+                            ].join(" ")}
+                          >
+                            <div className="flex items-center gap-3">
+                              <SvgIcon src={c.src} alt={c.alt} invert={isDark} size={28} />
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold truncate">{c.label}</div>
+                                <div className={`text-xs ${subText}`}>Click to choose</div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -358,21 +477,21 @@ export default function EscapeRoomClient() {
                   label={showHint ? "Hide Hint" : "Show Hint"}
                   onClick={() => setShowHint((v) => !v)}
                   disabled={failed}
-                  leftIcon={<SvgIcon src="/icons/Hint.svg" alt="Hint" />}
+                  leftIcon={<SvgIcon src="/icons/Hint.svg" alt="Hint" invert={isDark} />}
                   isDark={isDark}
                 />
                 <SmallActionButton
                   label="Check"
                   onClick={check}
-                  disabled={failed}
-                  leftIcon={<SvgIcon src="/icons/Check.svg" alt="Check" />}
+                  disabled={checkDisabled}
+                  leftIcon={<SvgIcon src="/icons/Check.svg" alt="Check" invert={isDark} />}
                   isDark={isDark}
                 />
                 <SmallActionButton
                   label={isLast ? "Finish" : "Next"}
                   onClick={next}
                   disabled={failed}
-                  leftIcon={<SvgIcon src="/icons/Next.svg" alt="Next" />}
+                  leftIcon={<SvgIcon src="/icons/Next.svg" alt="Next" invert={isDark} />}
                   isDark={isDark}
                 />
               </div>
@@ -397,7 +516,7 @@ export default function EscapeRoomClient() {
                   }
                 }}
                 placeholder={stage.placeholder}
-                disabled={failed}
+                disabled={failed || !!stage.iconChoice}
                 rows={4}
                 className={`mt-2 w-full resize-y rounded-xl border px-4 py-3 text-sm outline-none disabled:opacity-60 ${inputBorder} ${focusRing}`}
                 style={{
@@ -432,9 +551,7 @@ export default function EscapeRoomClient() {
             )}
           </div>
 
-          {/* Sidebar */}
           <div className="flex flex-col gap-4">
-            {/* If your Timer component is hard-coded dark, this keeps it readable in light mode */}
             <div style={isDark ? undefined : { filter: "invert(1) hue-rotate(180deg)" }}>
               <Timer initialSeconds={stage.timeSeconds} onExpire={onExpire} />
             </div>
@@ -476,9 +593,9 @@ export default function EscapeRoomClient() {
               </div>
 
               <p className={`mt-4 text-xs ${subText}`}>
-                Add SVG icons in{" "}
-                <code className={`rounded px-1 ${isDark ? "bg-white/10" : "bg-black/10"}`}>/public/icons</code> to
-                replace emoji.
+                Icons in{" "}
+                <code className={`rounded px-1 ${isDark ? "bg-white/10" : "bg-black/10"}`}>/public/icons</code>.
+                Ensure <code className={`rounded px-1 ${isDark ? "bg-white/10" : "bg-black/10"}`}>Debug.svg</code> exists.
               </p>
             </div>
           </div>
