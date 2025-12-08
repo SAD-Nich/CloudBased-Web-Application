@@ -190,16 +190,16 @@ const SCENARIOS: Scenario[] = [
         prompt:
           "A door panel says: “Select the icon that represents debugging / inspection.”\n\nChoose the correct icon below. Wrong choices will not unlock the door.",
         hint: "Think: debugging = inspect / bug / magnifier. Your correct one is the Debug icon you created.",
-        timeSeconds: 120,
+        timeSeconds: 60,
         inputLabel: "Icon selection",
         placeholder: "Choose the correct icon...",
         iconChoice: {
           instruction: "Click the correct icon to unlock the debugger.",
           correctId: "debug",
           choices: [
-            { id: "check", src: "/icons/Check.svg", alt: "Check", label: "Check" },
-            { id: "next", src: "/icons/Next.svg", alt: "Next", label: "Next" },
-            { id: "hint", src: "/icons/Hint.svg", alt: "Hint", label: "Hint" },
+            { id: "Code", src: "/icons/Code.svg", alt: "Check", label: "Code" },
+            { id: "git", src: "/icons/Git.svg", alt: "Next", label: "Git" },
+            { id: "run and debug", src: "/icons/runanddebug.svg", alt: "Hint", label: "Run and Debug" },
             { id: "debug", src: "/icons/Debug.svg", alt: "Debug", label: "Debug" }, // ✅ correct
           ],
         },
@@ -423,13 +423,13 @@ export default function EscapeRoomClient() {
 
                 {/* ✅ Multiple-choice icon stage */}
                 {stage.iconChoice && (
-                  <div className={`mt-4 rounded-2xl border p-4 ${card2Bg} ${cardBorder}`}>
+                  <div className={`mt-4 rounded-2xl border p-5 ${card2Bg} ${cardBorder}`}>
                     <div className="text-sm font-extrabold">{stage.iconChoice.instruction}</div>
                     <div className={`mt-1 text-xs ${subText}`}>
                       {unlockedByIcon ? "✅ Correct icon selected. You may proceed." : "Pick carefully — only one is correct."}
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="mt-5 grid grid-cols-2 gap-2 lg:grid-cols-4">
                       {stage.iconChoice.choices.map((c) => {
                         const selected = answer === c.id;
                         return (
@@ -449,7 +449,7 @@ export default function EscapeRoomClient() {
                               }
                             }}
                             className={[
-                              "rounded-2xl border p-3 text-left transition",
+                              "rounded-2xl border p-1 min-h-[120px] w-full transition",
                               "focus:outline-none focus:ring-2",
                               selected ? (isDark ? "border-white/30" : "border-black/30") : "",
                               isDark
@@ -457,10 +457,10 @@ export default function EscapeRoomClient() {
                                 : "border-black/15 bg-white hover:bg-zinc-50 focus:ring-black/10",
                             ].join(" ")}
                           >
-                            <div className="flex items-center gap-3">
-                              <SvgIcon src={c.src} alt={c.alt} invert={isDark} size={28} />
+                            <div className="flex items-center gap-2">
+                              <SvgIcon src={c.src} alt={c.alt} invert={isDark} size={20} />
                               <div className="min-w-0">
-                                <div className="text-sm font-semibold truncate">{c.label}</div>
+                                <div className="text-sm font-semibold leading-tight break words">{c.label}</div>
                                 <div className={`text-xs ${subText}`}>Click to choose</div>
                               </div>
                             </div>
