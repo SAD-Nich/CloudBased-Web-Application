@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/escape-runs?scenarioId=debug-crypt
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -29,7 +28,6 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/escape-runs
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -39,14 +37,12 @@ export async function POST(req: Request) {
         scenarioId: String(body.scenarioId ?? ""),
         scenarioName: String(body.scenarioName ?? ""),
 
-        // prefer runName; allow notes as fallback if you want
         runName: body.runName ? String(body.runName) : null,
 
         success: Boolean(body.success ?? true),
         durationSeconds: Number(body.durationSeconds ?? 0),
         stages: body.stages ?? [],
 
-        // keep notes if you're using it elsewhere
         notes: body.notes ? String(body.notes) : null,
       },
       select: {
@@ -67,22 +63,17 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH /api/escape-runs?id=xxxxx   (rename)
 export async function PATCH(req: Request) {
   try {
     const url = new URL(req.url);
 
-    // ✅ Prefer REST style: id in query string
-    // Also allow body.id for backward compatibility
     const body = await req.json().catch(() => ({} as any));
     const id = String(url.searchParams.get("id") ?? body?.id ?? "");
 
-    // ✅ Prefer body.name (simple), but accept body.runName too
     const incomingName = body?.name ?? body?.runName ?? null;
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-    // allow clearing name by sending null/empty string
     const runName =
       incomingName === null || incomingName === undefined
         ? null
@@ -109,7 +100,6 @@ export async function PATCH(req: Request) {
   }
 }
 
-// DELETE /api/escape-runs?id=xxxxx
 export async function DELETE(req: Request) {
   try {
     const url = new URL(req.url);

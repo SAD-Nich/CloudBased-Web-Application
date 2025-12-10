@@ -13,7 +13,6 @@ const selectRun = {
   createdAt: true,
 } as const;
 
-// GET /api/escape-runs/[id]
 export async function GET(_req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
@@ -34,7 +33,6 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   }
 }
 
-// PATCH /api/escape-runs/[id]  (rename)
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
@@ -55,7 +53,6 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
 }
 
-// DELETE /api/escape-runs/[id]
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;

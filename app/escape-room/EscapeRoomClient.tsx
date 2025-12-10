@@ -31,7 +31,7 @@ type SavedRun = {
   id: string;
   scenarioId: string;
   scenarioName: string;
-  runName?: string | null; // displayed name
+  runName?: string | null;
   success: boolean;
   durationSeconds: number;
   createdAt: string;
@@ -110,7 +110,6 @@ function SmallActionButton({
   );
 }
 
-// ===== Scenarios (unchanged) =====
 const SCENARIOS: Scenario[] = [
   {
     id: "format-lock",
@@ -271,22 +270,18 @@ const SCENARIOS: Scenario[] = [
 export default function EscapeRoomClient() {
   const [isDark, setIsDark] = useState(true);
 
-  // ====== SAVE-TO-DB ======
   const [runStartedAt, setRunStartedAt] = useState<number>(() => Date.now());
   const [stageAnswers, setStageAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // name the run
   const [runName, setRunName] = useState("");
 
-  // ====== VIEW SAVED RUNS ======
   const [savedRuns, setSavedRuns] = useState<SavedRun[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(false);
   const [runsError, setRunsError] = useState<string | null>(null);
 
-  // ====== RENAME SAVED RUNS ======
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState<string>("");
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -332,7 +327,6 @@ export default function EscapeRoomClient() {
 
       const data = (await res.json()) as any;
 
-      // ✅ normalize “right shape”
       const arr = Array.isArray(data) ? data : [];
       const normalized: SavedRun[] = arr.map((r: any) => ({
         id: String(r.id),
@@ -363,7 +357,6 @@ export default function EscapeRoomClient() {
 
   useEffect(() => {
     loadRuns(scenarioId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId]);
 
   const resetRun = () => {
@@ -473,7 +466,6 @@ export default function EscapeRoomClient() {
           scenarioId: scenario.id,
           scenarioName: scenario.name,
 
-          // ✅ send both; backend can store in notes OR runName depending on your API
           runName: name,
           notes: name,
 
@@ -814,7 +806,6 @@ export default function EscapeRoomClient() {
               <Timer initialSeconds={stage.timeSeconds} onExpire={onExpire} />
             </div>
 
-            {/* Progress */}
             <div className={`rounded-2xl border p-5 backdrop-blur ${cardBg} ${cardBorder}`}>
               <div className={`text-xs ${subText}`}>Progress</div>
 
@@ -852,7 +843,6 @@ export default function EscapeRoomClient() {
               </div>
             </div>
 
-            {/* Saved Runs */}
             <div className={`rounded-2xl border p-5 backdrop-blur ${cardBg} ${cardBorder}`}>
               <div className={`text-xs ${subText}`}>Saved Runs</div>
 
@@ -886,7 +876,6 @@ export default function EscapeRoomClient() {
                           </div>
                           <div className={`text-xs ${subText}`}>{new Date(r.createdAt).toLocaleString()}</div>
 
-                          {/* Rename controls */}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {renamingId === r.id ? (
                               <>

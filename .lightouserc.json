@@ -1,0 +1,21 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "https://ltuassignment2.vercel.app/",
+        "https://ltuassignment2.vercel.app/escape-room"
+      ],
+      "numberOfRuns": 3
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.6 }],
+        "categories:accessibility": ["warn", { "minScore": 0.8 }]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": "./lighthouse-reports"
+    }
+  }
+}
