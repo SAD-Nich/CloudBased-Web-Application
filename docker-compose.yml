@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: escape_room_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: escape_room
+    ports:
+      - "5433:5432"   # host:container (keep 5433 to avoid conflicts)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d escape_room"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    container_name: escape_room_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # IMPORTANT: inside Docker use db:5432 (NOT localhost)
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/escape_room?schema=public"
+      NODE_ENV: "production"
+      POSTGRES_HOST: "db"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "postgres"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
