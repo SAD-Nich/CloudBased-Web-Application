@@ -13,7 +13,6 @@ type Stage = {
   placeholder: string;
   validate: (answer: string) => { ok: boolean; message: string };
 
-  // ✅ Optional: stage can require selecting the correct icon
   iconChoice?: {
     instruction: string;
     correctId: string;
@@ -26,6 +25,16 @@ type Scenario = {
   name: string;
   backgroundUrl: string;
   stages: Stage[];
+};
+
+type SavedRun = {
+  id: string;
+  scenarioId: string;
+  scenarioName: string;
+  runName?: string | null; // displayed name
+  success: boolean;
+  durationSeconds: number;
+  createdAt: string;
 };
 
 function normalize(s: string) {
@@ -101,6 +110,7 @@ function SmallActionButton({
   );
 }
 
+// ===== Scenarios (unchanged) =====
 const SCENARIOS: Scenario[] = [
   {
     id: "format-lock",
@@ -149,7 +159,10 @@ const SCENARIOS: Scenario[] = [
               obj.id === 42 &&
               obj.name === "Keyboard" &&
               Number(obj.price) === 199.99;
-            return { ok, message: ok ? "Correct conversion — data port complete." : "Valid JSON, but values/keys are wrong." };
+            return {
+              ok,
+              message: ok ? "Correct conversion — data port complete." : "Valid JSON, but values/keys are wrong.",
+            };
           } catch {
             return { ok: false, message: "That isn't valid JSON." };
           }
@@ -174,7 +187,10 @@ const SCENARIOS: Scenario[] = [
             /while\s*\(\s*\w+\s*<=\s*1000\s*\)/.test(a) &&
             /console\.log\s*\(\s*\w+\s*\)/.test(a);
           const ok = hasForLoop || hasWhileLoop;
-          return { ok, message: ok ? "Perfect — the range gate opens. ✅" : "Not quite. Make sure it prints 0..1000 inclusive." };
+          return {
+            ok,
+            message: ok ? "Perfect — the range gate opens. ✅" : "Not quite. Make sure it prints 0..1000 inclusive.",
+          };
         },
       },
     ],
@@ -197,10 +213,10 @@ const SCENARIOS: Scenario[] = [
           instruction: "Click the correct icon to unlock the debugger.",
           correctId: "debug",
           choices: [
-            { id: "Code", src: "/icons/Code.svg", alt: "Check", label: "Code" },
-            { id: "git", src: "/icons/Git.svg", alt: "Next", label: "Git" },
-            { id: "run and debug", src: "/icons/runanddebug.svg", alt: "Hint", label: "Run and Debug" },
-            { id: "debug", src: "/icons/Debug.svg", alt: "Debug", label: "Debug" }, // ✅ correct
+            { id: "Code", src: "/icons/Code.svg", alt: "Code", label: "Code" },
+            { id: "git", src: "/icons/Git.svg", alt: "Git", label: "Git" },
+            { id: "run and debug", src: "/icons/runanddebug.svg", alt: "Run and Debug", label: "Run and Debug" },
+            { id: "debug", src: "/icons/Debug.svg", alt: "Debug", label: "Debug" },
           ],
         },
         validate: (ans) => {
@@ -216,7 +232,7 @@ const SCENARIOS: Scenario[] = [
         hint: "Valid JSON uses double quotes, and no trailing commas.",
         timeSeconds: 180,
         inputLabel: "Valid JSON",
-        placeholder: `{"a":1}`,
+        placeholder: `Enter your answer here...`,
         validate: (ans) => {
           try {
             const obj = JSON.parse(ans);
@@ -235,14 +251,17 @@ const SCENARIOS: Scenario[] = [
         hint: "Use trim() and parseInt/Number.",
         timeSeconds: 180,
         inputLabel: "One-line JS",
-        placeholder: `parseInt("  042  ".trim(), 10)`,
+        placeholder: `Remember to use trim() and parseInt/Number...`,
         validate: (ans) => {
           const a = ans.toLowerCase().replace(/\s/g, "");
           const hasTrim = a.includes(".trim()");
           const has042 = a.includes('"042"') || a.includes("'042'") || a.includes("042");
           const hasParse = a.includes("parseint(") || a.includes("number(");
           const ok = hasTrim && has042 && hasParse;
-          return { ok, message: ok ? "Nice — clean parse. You escaped! ✅" : "Not yet. Must include trim() and parseInt/Number." };
+          return {
+            ok,
+            message: ok ? "Nice — clean parse. You escaped! ✅" : "Not yet. Must include trim() and parseInt/Number.",
+          };
         },
       },
     ],
@@ -251,6 +270,26 @@ const SCENARIOS: Scenario[] = [
 
 export default function EscapeRoomClient() {
   const [isDark, setIsDark] = useState(true);
+
+  // ====== SAVE-TO-DB ======
+  const [runStartedAt, setRunStartedAt] = useState<number>(() => Date.now());
+  const [stageAnswers, setStageAnswers] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // name the run
+  const [runName, setRunName] = useState("");
+
+  // ====== VIEW SAVED RUNS ======
+  const [savedRuns, setSavedRuns] = useState<SavedRun[]>([]);
+  const [loadingRuns, setLoadingRuns] = useState(false);
+  const [runsError, setRunsError] = useState<string | null>(null);
+
+  // ====== RENAME SAVED RUNS ======
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState<string>("");
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   useEffect(() => {
     const read = () => {
@@ -275,15 +314,57 @@ export default function EscapeRoomClient() {
   const [showHint, setShowHint] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  // ✅ for icon-choice stage locking
   const [unlockedByIcon, setUnlockedByIcon] = useState(false);
+
+  async function loadRuns(sid?: string) {
+    const scenarioToLoad = sid ?? scenario.id;
+
+    setLoadingRuns(true);
+    setRunsError(null);
+    try {
+      const res = await fetch(`/api/escape-runs?scenarioId=${encodeURIComponent(scenarioToLoad)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `GET failed (${res.status})`);
+      }
+
+      const data = (await res.json()) as any;
+
+      // ✅ normalize “right shape”
+      const arr = Array.isArray(data) ? data : [];
+      const normalized: SavedRun[] = arr.map((r: any) => ({
+        id: String(r.id),
+        scenarioId: String(r.scenarioId),
+        scenarioName: String(r.scenarioName),
+        runName: (r.runName ?? r.notes ?? null) as string | null,
+        success: Boolean(r.success),
+        durationSeconds: Number(r.durationSeconds ?? 0),
+        createdAt: String(r.createdAt),
+      }));
+
+      setSavedRuns(normalized);
+    } catch (e: any) {
+      setSavedRuns([]);
+      setRunsError(e?.message ?? "Failed to load saved runs.");
+    } finally {
+      setLoadingRuns(false);
+    }
+  }
 
   useEffect(() => {
     setUnlockedByIcon(false);
     setAnswer("");
     setStatus(null);
     setShowHint(false);
+    setSaveError(null);
   }, [scenarioId, stageIndex]);
+
+  useEffect(() => {
+    loadRuns(scenarioId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId]);
 
   const resetRun = () => {
     setStageIndex(0);
@@ -292,6 +373,16 @@ export default function EscapeRoomClient() {
     setShowHint(false);
     setFailed(false);
     setUnlockedByIcon(false);
+
+    setRunStartedAt(Date.now());
+    setStageAnswers({});
+    setSavedId(null);
+    setSaveError(null);
+    setRunName("");
+
+    setRenamingId(null);
+    setRenameValue("");
+    setRenameError(null);
   };
 
   const changeScenario = (id: string) => {
@@ -302,10 +393,25 @@ export default function EscapeRoomClient() {
     setShowHint(false);
     setFailed(false);
     setUnlockedByIcon(false);
+
+    setRunStartedAt(Date.now());
+    setStageAnswers({});
+    setSavedId(null);
+    setSaveError(null);
+    setRunName("");
+
+    setRenamingId(null);
+    setRenameValue("");
+    setRenameError(null);
   };
 
   const check = () => {
     if (failed) return;
+
+    if (!stage.iconChoice) {
+      setStageAnswers((prev) => ({ ...prev, [stage.id]: answer }));
+    }
+
     if (stage.iconChoice && !unlockedByIcon) {
       setStatus({ ok: false, msg: "Pick the correct icon first." });
       return;
@@ -313,6 +419,8 @@ export default function EscapeRoomClient() {
 
     const res = stage.validate(answer);
     setStatus({ ok: res.ok, msg: res.message });
+
+    setStageAnswers((prev) => ({ ...prev, [stage.id]: answer }));
   };
 
   const next = () => {
@@ -336,6 +444,109 @@ export default function EscapeRoomClient() {
   };
 
   const isLast = stageIndex === scenario.stages.length - 1;
+  const runComplete = Boolean(isLast && status?.ok);
+
+  async function saveRun() {
+    if (!runComplete) return;
+    if (saving || savedId) return;
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const durationSeconds = Math.max(0, Math.floor((Date.now() - runStartedAt) / 1000));
+
+      const stagesPayload = scenario.stages.map((st, idx) => ({
+        stageId: st.id,
+        title: st.title,
+        index: idx,
+        timeLimitSeconds: st.timeSeconds,
+        answer: stageAnswers[st.id] ?? (st.id === stage.id ? answer : ""),
+      }));
+
+      const name = runName.trim() || null;
+
+      const res = await fetch("/api/escape-runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenarioId: scenario.id,
+          scenarioName: scenario.name,
+
+          // ✅ send both; backend can store in notes OR runName depending on your API
+          runName: name,
+          notes: name,
+
+          success: true,
+          durationSeconds,
+          stages: stagesPayload,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || "Save failed");
+      }
+
+      const data = await res.json();
+      setSavedId(data.id ?? "saved");
+
+      await loadRuns(scenario.id);
+    } catch (e: any) {
+      setSaveError(e?.message ?? "Failed to save run.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteRun(id: string) {
+    try {
+      const res = await fetch(`/api/escape-runs?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `Delete failed (${res.status})`);
+      }
+      await loadRuns(scenario.id);
+      if (savedId === id) setSavedId(null);
+    } catch (e: any) {
+      setRunsError(e?.message ?? "Failed to delete run.");
+    }
+  }
+
+  async function renameRun(id: string) {
+    const name = renameValue.trim();
+    if (!name) {
+      setRenameError("Name cannot be empty.");
+      return;
+    }
+    if (name.length > 60) {
+      setRenameError("Name too long (max 60 chars).");
+      return;
+    }
+
+    setRenameError(null);
+
+    try {
+      const res = await fetch(`/api/escape-runs?id=${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }), // ✅ matches the PATCH I gave you
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `Rename failed (${res.status})`);
+      }
+
+      setRenamingId(null);
+      setRenameValue("");
+      setRenameError(null);
+
+      await loadRuns(scenario.id);
+    } catch (e: any) {
+      setRenameError(e?.message ?? "Failed to rename run.");
+    }
+  }
 
   const wrapText = isDark ? "text-white" : "text-zinc-900";
   const subText = isDark ? "text-white/75" : "text-zinc-600";
@@ -421,7 +632,6 @@ export default function EscapeRoomClient() {
                   {stage.prompt}
                 </p>
 
-                {/* ✅ Multiple-choice icon stage */}
                 {stage.iconChoice && (
                   <div className={`mt-4 rounded-2xl border p-5 ${card2Bg} ${cardBorder}`}>
                     <div className="text-sm font-extrabold">{stage.iconChoice.instruction}</div>
@@ -438,6 +648,7 @@ export default function EscapeRoomClient() {
                             type="button"
                             onClick={() => {
                               setAnswer(c.id);
+                              setStageAnswers((prev) => ({ ...prev, [stage.id]: c.id }));
 
                               const isCorrect = c.id === stage.iconChoice!.correctId;
                               if (isCorrect) {
@@ -449,7 +660,7 @@ export default function EscapeRoomClient() {
                               }
                             }}
                             className={[
-                              "rounded-2xl border p-1 min-h-[120px] w-full transition",
+                              "rounded-2xl border p-3 min-h-[120px] w-full transition",
                               "focus:outline-none focus:ring-2",
                               selected ? (isDark ? "border-white/30" : "border-black/30") : "",
                               isDark
@@ -459,8 +670,8 @@ export default function EscapeRoomClient() {
                           >
                             <div className="flex items-center gap-2">
                               <SvgIcon src={c.src} alt={c.alt} invert={isDark} size={20} />
-                              <div className="min-w-0">
-                                <div className="text-sm font-semibold leading-tight break words">{c.label}</div>
+                              <div className="min-w-0 text-left">
+                                <div className="text-sm font-semibold leading-tight break-words">{c.label}</div>
                                 <div className={`text-xs ${subText}`}>Click to choose</div>
                               </div>
                             </div>
@@ -508,7 +719,13 @@ export default function EscapeRoomClient() {
               <label className={`block text-xs ${subText}`}>{stage.inputLabel}</label>
               <textarea
                 value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setAnswer(v);
+                  if (!stage.iconChoice) {
+                    setStageAnswers((prev) => ({ ...prev, [stage.id]: v }));
+                  }
+                }}
                 onKeyDown={(e) => {
                   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                     e.preventDefault();
@@ -540,7 +757,48 @@ export default function EscapeRoomClient() {
                   {status.ok ? "✅ Correct" : "❌ Not yet"}{" "}
                   <span className={`font-normal ${isDark ? "text-white/85" : "text-zinc-700"}`}>{status.msg}</span>
                 </div>
-                {status.ok && isLast && <div className="mt-2 font-extrabold">🏁 Run complete!</div>}
+
+                {runComplete && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <div className="font-extrabold">🏁 Run complete!</div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className={`text-xs ${subText}`}>Name this save (optional)</label>
+                      <input
+                        value={runName}
+                        onChange={(e) => setRunName(e.target.value)}
+                        placeholder="e.g. First perfect run"
+                        className={`w-full rounded-xl border px-3 py-2 text-sm outline-none ${focusRing} ${inputBorder}`}
+                        style={{
+                          background: isDark ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.95)",
+                          color: "inherit",
+                        }}
+                        maxLength={60}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={saveRun}
+                        disabled={saving || !!savedId}
+                        className={[
+                          "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                          "focus:outline-none focus:ring-2",
+                          saving || savedId ? "cursor-not-allowed opacity-60" : "hover:shadow-sm active:translate-y-[1px]",
+                          isDark
+                            ? "border-white/15 bg-white/10 text-white hover:bg-white/15 focus:ring-white/20"
+                            : "border-black/15 bg-white text-zinc-900 hover:bg-zinc-50 focus:ring-black/10",
+                        ].join(" ")}
+                      >
+                        <SvgIcon src="/icons/Save.svg" alt="Save" invert={isDark} />
+                        <span>{savedId ? "Saved ✅" : saving ? "Saving..." : "Save Run"}</span>
+                      </button>
+
+                      {saveError && <div className="text-sm text-red-300">{saveError}</div>}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -556,6 +814,7 @@ export default function EscapeRoomClient() {
               <Timer initialSeconds={stage.timeSeconds} onExpire={onExpire} />
             </div>
 
+            {/* Progress */}
             <div className={`rounded-2xl border p-5 backdrop-blur ${cardBg} ${cardBorder}`}>
               <div className={`text-xs ${subText}`}>Progress</div>
 
@@ -591,11 +850,117 @@ export default function EscapeRoomClient() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Saved Runs */}
+            <div className={`rounded-2xl border p-5 backdrop-blur ${cardBg} ${cardBorder}`}>
+              <div className={`text-xs ${subText}`}>Saved Runs</div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <span className={`text-xs ${subText}`}>Scenario: {scenario.name}</span>
+                <button type="button" onClick={() => loadRuns(scenario.id)} className={`text-xs underline ${subText}`}>
+                  Refresh
+                </button>
+              </div>
+
+              {runsError && <div className="mt-2 text-xs text-red-300">{runsError}</div>}
+
+              {loadingRuns ? (
+                <div className={`mt-3 text-sm ${subText}`}>Loading…</div>
+              ) : savedRuns.length === 0 ? (
+                <div className={`mt-3 text-sm ${subText}`}>No saved runs yet.</div>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {savedRuns.map((r) => (
+                    <div
+                      key={r.id}
+                      className={[
+                        "rounded-xl border px-3 py-2",
+                        isDark ? "border-white/10 bg-black/25" : "border-black/10 bg-white/60",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold">
+                            {r.runName?.trim() ? r.runName : r.success ? "✅ Success" : "❌ Failed"}
+                          </div>
+                          <div className={`text-xs ${subText}`}>{new Date(r.createdAt).toLocaleString()}</div>
+
+                          {/* Rename controls */}
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {renamingId === r.id ? (
+                              <>
+                                <input
+                                  value={renameValue}
+                                  onChange={(e) => setRenameValue(e.target.value)}
+                                  className={`rounded-lg border px-2 py-1 text-xs outline-none ${inputBorder} ${focusRing}`}
+                                  style={{
+                                    background: isDark ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.95)",
+                                    color: "inherit",
+                                  }}
+                                  placeholder="Run name..."
+                                  maxLength={60}
+                                />
+                                <button type="button" onClick={() => renameRun(r.id)} className={`text-xs underline ${subText}`}>
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRenamingId(null);
+                                    setRenameValue("");
+                                    setRenameError(null);
+                                  }}
+                                  className={`text-xs underline ${subText}`}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRenamingId(r.id);
+                                  setRenameValue(r.runName?.trim() || "");
+                                  setRenameError(null);
+                                }}
+                                className={`text-xs underline ${subText}`}
+                              >
+                                Rename
+                              </button>
+                            )}
+                          </div>
+
+                          {renamingId === r.id && renameError && (
+                            <div className="mt-1 text-xs text-red-300">{renameError}</div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="text-sm font-extrabold">{formatMMSS(Number(r.durationSeconds ?? 0))}</div>
+                            <div className={`text-xs ${subText}`}>time</div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteRun(r.id)}
+                            className={[
+                              "shrink-0 rounded-lg border px-2 py-1 text-xs font-semibold transition",
+                              isDark ? "border-white/15 bg-white/10 hover:bg-white/15" : "border-black/15 bg-white hover:bg-zinc-50",
+                            ].join(" ")}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <p className={`mt-4 text-xs ${subText}`}>
-                Icons in{" "}
-                <code className={`rounded px-1 ${isDark ? "bg-white/10" : "bg-black/10"}`}>/public/icons</code>.
-                Ensure <code className={`rounded px-1 ${isDark ? "bg-white/10" : "bg-black/10"}`}>Debug.svg</code> exists.
+                Make sure <code className={`rounded px-1 ${isDark ? "bg-white/10" : "bg-black/10"}`}>Save.svg</code> exists.
               </p>
             </div>
           </div>
