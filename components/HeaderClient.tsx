@@ -12,27 +12,32 @@ function setCookie(name: string, value: string, days = 365) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
 }
 
+function applyThemeToHtml(isDark: boolean) {
+  document.documentElement.classList.toggle("dark", isDark);
+  // helps browser render form controls correctly in each theme
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+}
+
 export default function HeaderClient({ children }: { children: React.ReactNode }) {
-  const [darkMode, setDarkMode] = useState(true); // default as before
+  const [darkMode, setDarkMode] = useState(true);
+
   useEffect(() => {
-    const saved = getCookie("theme");
-    if (saved === "light") setDarkMode(false);
-    if (saved === "dark") setDarkMode(true);
+    const saved = getCookie("theme"); // "dark" | "light" | null
+    const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? true;
+    const isDark = saved ? saved === "dark" : systemDark;
+
+    setDarkMode(isDark);
+    applyThemeToHtml(isDark);
   }, []);
+
   const handleSetDarkMode = (val: boolean) => {
     setDarkMode(val);
     setCookie("theme", val ? "dark" : "light");
+    applyThemeToHtml(val);
   };
 
   return (
-    <div
-      style={{
-        background: darkMode ? "#111" : "#fff",
-        color: darkMode ? "#fff" : "#000",
-        transition: "background 0.3s ease, color 0.3s ease",
-        minHeight: "100vh",
-      }}
-    >
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors">
       <Header darkMode={darkMode} setDarkMode={handleSetDarkMode} />
       {children}
     </div>

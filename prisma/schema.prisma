@@ -1,0 +1,25 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model EscapeRun {
+  id              String   @id @default(cuid())
+  scenarioId       String
+  scenarioName     String
+  runName          String?
+  success         Boolean  @default(true)
+  durationSeconds Int
+  stages          Json
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([scenarioId])
+  @@index([createdAt])
+  @@index([runName])
+}
